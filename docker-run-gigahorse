@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -ex
+
+date
+
+to_analyze="$1"
+
+../bin/generatefacts "$to_analyze" out
+./decompiler_compiled --facts out
+../../gigahorse-clients/source_decompiler.dl_compiled
+../../gigahorse-clients/get_source.py
+../../gigahorse-clients/madmax.dl_compiled
+
+cat decompiled.sol
+
+cat Vulnerability_OverflowLoopIterator.csv
+cat Vulnerability_UnboundedMassOp.csv
+cat Vulnerability_WalletGriefing.csv
+
