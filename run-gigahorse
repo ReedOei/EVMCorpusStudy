@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -ex
+
+date
+
+input_file="$1"
+contract_name="$2"
+
+compiled_path="compiled/$(basename "$input_file")"
+
+solc --overwrite --bin-runtime "$input_file" -o "$compiled_path"
+
+docker run -v "$(pwd)":/tmp/host -it gigahorse "/tmp/host/docker-run-gigahorse" "/tmp/host/$compiled_path/$contract_name.bin-runtime"
+

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -ex
+
+search_loc="$1"
+cur_list="$2"
+
+new_contracts="$(find "$search_loc" -name "*.sol" | grep -Fv "$cur_list" | shuf -n 5 | xargs -L1 basename)"
+echo "$new_contracts"
+echo "$new_contracts" >> "$cur_list"
+echo "$new_contracts" >> new-contract-list
+

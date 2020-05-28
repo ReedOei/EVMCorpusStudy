@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -ex
+
+date
+
+INFURA_ID="e375f839620843ca953814c877aa699c"
+time docker run --env "INFURA_ID=$INFURA_ID" mythril/myth "$@"
+
+# if [[ "$2" == "-a" ]]; then
+#     docker run mythril/myth analyze "$@"
+# else
+#     abs_path="$(realpath "$1")"
+#     dir_path="$(dirname "$abs_path")"
+#     fname="$(basename "$1")"
+
+#     docker run -v "$dir_path":/tmp mythril/myth analyze /tmp/"$fname"
+# fi
+

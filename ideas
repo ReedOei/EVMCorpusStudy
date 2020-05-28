@@ -1,0 +1,284 @@
+Double spending and other asset issues
+- TODO: How to find uses/errors?
+    - Maybe only look at ethereum as an asset.
+    - Alternatively, maybe just track everything as an asset
+
+Use of typestate and typestate errors
+- What would these look like?
+- How would we know if they're using typestate?
+    - In java, can look at IllegalStateExceptions, but there's no such thing in Solidity/EVM
+- TODO: How to find uses/errors?
+
+Reentracy issues:
+- TODO: How to detect? Lots of detectors already look for this
+
+TODO:
+- Will need examples of asset loss and such
+    - Maybe can take these from the user study of people writing Solidity code?
+- Probably should just get some contracts and look at them to see what patterns I can find
+
+- COME UP WITH A LIST OF THE CORPUS/TOOL STUDIES (AND MAYBE SOME DESCRIPTION)
+    - Maybe make a google drive folder for this stuff
+- Typestate questions:
+    - Do people use typestate/how much
+    - How many states
+    - Do they use modifiers to check it/how is it enforced?
+
+======================================================================
+======================================================================
+Initial findings:
+======================================================================
+======================================================================
+
+Ways to detect state usage (first-glance heuristics):
+- requires on state variables that are not maps (especially if enums are used)
+- use of Pausable pattern (seems to be pretty standard)
+- Usage of enums
+
+- Can we somehow track contracts handling of ether/tokens and make sure none is lost?
+
+20 randomly selected contracts from: https://github.com/smartbugs/smartbugs-wild (Empirical Review of Automated Analysis Tools on 47,587 Ethereum Smart Contracts)
+
+-----------------------------------------------
+0x5c54142e962dc587fd37cb0e261b7e0851c384d2.sol:
+-----------------------------------------------
+- Token application
+- Mostly standard, but also has the ability to "Burn" tokens (getting rid of them)
+- No state
+- No ownership (except perhaps of tokens)
+- No Approve event (required by ERC-20 standard)
+
+-----------------------------------------------
+0xd682bd1cfe2d4c070b41dd122a2ed2d13d4db5bd.sol
+-----------------------------------------------
+- Token application, with separate Token contract and implementations.
+- Seems to maybe be a sort of template thing for writing tokens.
+- TODO: I think that it can lose money in the fallback function if it gets sent money that it can't handle, it doesn't revert or anything?
+- No state, no owernship (except for money/token, as usual)
+
+-----------------------------------------------
+0x62114487edb42b45b443276b14cf8316cdc090b1.sol
+-----------------------------------------------
+- Tokens...uses "basic" version of ERC20, and then builds not basic version
+- Uses SafeMath
+- Seems to be pretty standard, but with added increaseApproval/decreaseApproval methods.
+- No state, no ownership (except for money/token, as usual)
+
+-----------------------------------------------
+INTERESTING
+0x36490a555a0019ea8457401584de111213ebd31a.sol
+-----------------------------------------------
+- Crowdfunding application? Uses tokens, ERC-20.
+    - But it also has some ERC-223, a newer token standard
+- Has mint
+- Uses SafeMath
+- HAS OWNERSHIP:
+    - Uses Ownable contract
+        - Which address owns something, not exactly an ownership relationship like in Obsidian.
+        - Also, actually allows two owners (the original owner never loses ownership?)
+    - Has investor struct, in Obsidian we would say that the CTV contract owns all the Investors. Ownership never changes hands.
+- HAS STATES (I'd write them as):
+    - SaleNotStarted
+    - SaleRunning
+    - SalePaused
+    - SaleFinalized (maybe this state is unnecessary)
+    - RefundNotRequired
+    - RefundRequired
+    - RefundInProgress
+    - RefundCompleted
+
+    - ISSUE?: Uses assert to check the state (you're not support to do this...should use require instead)
+- Handles short address attack
+
+-----------------------------------------------
+0xc3a1c1eea96588fc1f67f29fac5526225b1a16ae.sol
+-----------------------------------------------
+- Uses tokens, ERC-20
+- Uses SafeMath
+- Has increase/decrease allowance
+- Has burn
+- Has mint
+- No states
+- No ownership, except for money/token
+
+-----------------------------------------------
+0x0a9d1a2ef992d5d9fa366d287bfaba5994ebb9ef.sol
+-----------------------------------------------
+- Uses tokens, ERC-20
+- Has mint
+- Checks if a uint is less than 0...?
+- No states
+- No ownership, except for money/token
+
+-----------------------------------------------
+0xd1f0740ea97aab8430d69d12d00443a5a84f5d87.sol
+-----------------------------------------------
+- Uses tokens
+- Has burn
+- No approve event
+- No state
+- Has mint
+- Transfer checks > not >=, so you can only transfer 5 tokens if you have 6? That seems wrong...
+- Can "freeze" accounts, but doesn't seem to actually do anything.
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+
+-----------------------------------------------
+INTERESTING
+0x6b92d76c9d0d40e53019ffa51b6f0c9b6bc657c9.sol
+-----------------------------------------------
+- Uses SafeMath
+- Token, ERC-20
+- Handles short address attack
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+- States:
+    - Uses Pausable pattern (can only be paused/unpaused by owner)
+    I would say states are:
+    - Paused
+    - NotPaused
+
+- Potential issues:
+    - Can run multiTransfer even when paused, essentially meaning that you can't actually pause transfers...
+    - STATE BUG?
+
+-----------------------------------------------
+0x3ba9fc8b10b023ff94ce06c8bbab6210cbce390a.sol
+-----------------------------------------------
+- Uses SafeMath
+- Toekn, ERC-20
+- Has increase/decrease allowance
+- Has mint
+- Ownership is money/token
+- No states
+
+-----------------------------------------------
+0xce038523e278b6c1344d9e4f735f6064ad7a6032.sol
+-----------------------------------------------
+- Token, ERC-20
+- Uses SafeMath sometimes
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token (multiple kinds?)
+- No states
+
+-----------------------------------------------
+0xcb66862c93f25ee9c9f795eaad77b17938548e04.sol
+-----------------------------------------------
+- Token, ERC-20
+- Uses SafeMath
+- Has increase/decrease allowance
+- Has mint
+- Has burn
+- Ownership:
+    - Ownable pattern, single owner (can renounce ownership)
+- States:
+    - Pausable pattern
+    States are:
+    - Paused,NotPaused
+
+-----------------------------------------------
+0x1ad89cda3532ad4179accda58917bd7bb632b290.sol
+-----------------------------------------------
+- Token, ERC-20 (PARTIAL, no totalSupply, maybe misisng other things?)
+
+- Ownership:
+    - Ownable pattern (BUT NO OWNABLE CONTRACT/INTERFACE), single owner
+        - Also has `multisig`, which gets all the either from the crowdsale, but doesn't control the contract when ownership is transferred.
+- States:
+    - CrowdSaleOpen
+    - CrowdSaleClosed
+
+-----------------------------------------------
+0xdbc256df8ab0767d8e7f1eef5e6025520699d8a0.sol
+-----------------------------------------------
+- Token, ERC-20
+- No states
+- Ownership is money/token
+
+-----------------------------------------------
+0xbd791314f50c8854866ce4db764b3031d7a9a68e.sol
+-----------------------------------------------
+- Address verification?
+    - Unclear what this part is for...?
+- Allows you can transfer tokens of artbirary kinds between tokens as long as they implement the right interface?
+- Ownership:
+    - Ownable pattern, single owner
+        - Transferring ownership requires the new owner accept the ownership.
+- No states
+
+-----------------------------------------------
+INTERESTING
+0xf2a7993b044e82d1679dab150d15847d22937fd6.sol
+-----------------------------------------------
+- Uses safemath
+- Crowdsale app, uses Token, ERC-20
+- Ownership:
+    - Ownable pattern, single owner
+- States (from code enum):
+    - none,icoStart,icoEnd
+
+-----------------------------------------------
+0x222139425bcb172721dd4c22c29dd841d4358f69.sol
+-----------------------------------------------
+- Uses SafeMath
+- For some reason BITXOXO inherits from SafeMath???
+- No Approve event.
+- Throws on approve 0 (or negative, but it's a uint so it's unclear why they check that).
+    - POTENTIAL ISSUE: can't change approval amount without someone claiming it?
+- Ownership:
+    - Ownable pattern, single owner, no Ownable contract.
+        - Ownership transfer also transfers all the tokens to the new owner?
+- No states
+
+-----------------------------------------------
+0x939aa1eca62ddd3f782a61c1b346b53687252ef6.sol
+-----------------------------------------------
+- Payment management contract?
+- Ownership:
+    - Payment Struct
+        - seems to be owned by the Syndicate contract
+        - Has "states": IsFork, NotFork, IsForked, NotForked
+            - Not exactly states, especially because you're really need to take product of those
+        - Also has states (these are real states):
+            - PaymentSettled, PaymentNotSettled
+- No states
+
+-----------------------------------------------
+0x925faac3bfb26571237a1b70a0486a24786256cf.sol
+-----------------------------------------------
+- Uses SafeMath
+- Token, ERC-20
+- Has mint
+- Has burn
+- Ownership:
+    - Has a "minter" (who can mint and burn) and an owner
+
+-----------------------------------------------
+0xeafff1c115d5f8060531356a21c46668eff6da96.sol
+-----------------------------------------------
+- Investment app
+- No states
+- No ownership, except for money/tokens
+
+-----------------------------------------------
+0x28b3381c0bf4658a2fa66fbcf6f31dcda1a7b596.sol
+-----------------------------------------------
+- Token, "Simple" ERC-20
+- No states
+- Ownership is money/token
+- Lots of confusing comments containing output from some program? Unclear
+For example:
+    ~  92     //     < SHERE_PFI_I_metadata_line_1_____UNITED_AIRCRAFT_CORPORATION_20220505 >
+~  93     //        < Z9SVqAIv0XB98LuNOaOlujd4LlIInRhP3y08DyipKiKvWBB2D97L6387xaKh4iZ1 >
+~  94     //        <  u =="0.000000000000000001" : ] 000000000000000.000000000000000000 ; 000000016314620.208489600000000000 ] >
+~  95     //        < 0x000000000000000000000000000000000000000000000000000000000018E4E6 >
+
+0x1b19c2de7e9f04be641942e8da83852c44c45c80.sol
+0xecff8fc2a19f83fc855618704f38725756dbcae3.sol
+0x07dfd774302842c337928956734353db7910af29.sol
+0x2873f3dfa8b9cdcda9b619b0c3a62c2cd9daf5c5.sol
+0x60908477e34ac000c2b6643e17d77c3c6e4acb30.sol
+
