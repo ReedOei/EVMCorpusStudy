@@ -12,7 +12,7 @@ git rev-parse HEAD
 
 data_dir="$1"
 
-find "$data_dir" -name "*.json" | while read -r fname; do
+find "$data_dir" -name "*.json" | sort -V | while read -r fname; do
     jq -r ".items[].html_url" "$fname"
 done
 
