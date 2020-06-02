@@ -748,42 +748,109 @@ INTERESTING
 - No states
 
 -----------------------------------------------
-https://github.com/InstaDApp/InstaContract
+INTERESTING
+https://github.com/LordotU/secret-santa-smart-contract
 -----------------------------------------------
+- "Secret Santa"
+- Uses "oraclize" to request data from WolframAlpha?
+- Ownership:
+    - Ownable pattern, single owner
+    - Owner can destruct
+    - Santa struct, Owned by the SecretSanta contract
+    - Money/token
+- States:
+    - NoSantas, HasSantas, HasAssignedSantas, Finished
+    - Would detect if we look at things like santas.length, but that's not exactly looking at one field, so I guess No?
+    - Methods such as assignSantas() can only be called when there are more than two Santas
+- Has a Random library
 
 -----------------------------------------------
-https://github.com/kuknos-network/DAO-smart-contract
+https://github.com/tooploox/ipfs-eth-database
 -----------------------------------------------
+- Blog post repository...?
+- Uses oraclize to access IPFS ("Interplanetary File Service") to store a JSON database.
+- Ownership:
+    - Ownable pattern, single owner
+- No states
 
 -----------------------------------------------
-https://github.com/chrisdotn/jsmnSol
+https://github.com/daifoundation/maker-otc-support-methods
 -----------------------------------------------
+- Library
+- Ownership:
+    - OfferInfo: OtcLike has owned reference to OfferInfo, which are assets
+- No states
 
 -----------------------------------------------
-https://github.com/makerdao/dss-deploy
+https://github.com/appliedblockchain/trufflib
 -----------------------------------------------
+- Reusable libraries
+- No ownership
+- No states
 
 -----------------------------------------------
-https://github.com/ConsenSys/smashing-smart-contracts-workshop
+https://github.com/godappslab/erc223-token-implementation
 -----------------------------------------------
+- Token, ERC-223
+- Ownership:
+    - Money/token
+    - Ownable pattern, single owner (no contract/interface)
+- No states
 
 -----------------------------------------------
-https://github.com/godappslab/signature-verification
+INTERESTING: Provides clear example of states on a child struct, but it's unclear how to detect this without tons of false positives. Maybe we should only check for things that do ==, and not >=? Not great...
+https://github.com/WayneJz/COMP6452-19T1
 -----------------------------------------------
+- CLASSWORK; only contract is a Voting app
+- Ownership:
+    - Voter structs are owned by LunchVote
+    - Lunch structs are owned by LunchVote
+- States:
+    - LunchVote: Initial, Voting, Finished
+        - Easily detectable
+    - Voter:
+        - NotAuthorized,Authorized,HasVoted
+        - Authorization is not easily detectable, stored in a separate array from the Voter struct called authorizedAddr
+        - HasVoted status is not easily detectable, because it's a state of a child struct
 
 -----------------------------------------------
-https://github.com/rapid-eth/rapid-collectibles
+https://github.com/aragon/aragon-id
 -----------------------------------------------
+- ID registry system
+- Uses Token, ERC-20
+- Ownership:
+    - Ownable pattern, single owner
+    - IHashRegistrarSimplified struct/interface is Owned by DeedHolder
+    - IDeed: Owned by an address, DeedHolder has an Unowned reference to the deeds.
+    - Money/token
+- States:
+    - IDeed: Open, Auction, Owned, Forbidden, Reveal, NotYetAvailable
+        - Not easily detectible.
 
 -----------------------------------------------
-https://github.com/Cdiamondcoin/dpt-token
+https://github.com/gnosis/dx-uniswap-arbitrage
 -----------------------------------------------
+- Arbitrages between two exchanges, uses ERC-20 tokens
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+- No states
 
 -----------------------------------------------
-https://github.com/loomnetwork/zb_game_mode
+https://github.com/authio-ethereum/Audits
 -----------------------------------------------
+- Repository contains many "audited" contracts, which seem to have their own repositories, so I skipped this one.
 
 -----------------------------------------------
-https://github.com/MichalZalecki/wyzwanie30w30-challenge
+https://github.com/dlx-lisbon/smart-contracts
 -----------------------------------------------
+- Token, ERC-721; also challenges, but unclear what those are exactly
+- Has AccessControl code.
+- Ownership:
+    - Ownable-like using Roles
+    - Challenge contract owns challenges
+    - Money/token
+- States:
+    - Challenges: Added, Completed, Removed
+        - Not easily detectable because state is of child objects in parallel maps/arrays
 
