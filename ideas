@@ -34,8 +34,74 @@ Ways to detect state usage (first-glance heuristics):
 - requires on state variables that are not maps (especially if enums are used)
 - use of Pausable pattern (seems to be pretty standard)
 - Usage of enums
+- Lots of states are time-based, which isn't something that we handle super well in Obsidian
+    - Maybe it would be worth adding new features to support this
+    - OTOH, using the timestamp is discouraged in Solidity, because it can be manipulated, so maybe we shouldn't try to make it easier to use it...then again, this mechanism can be used for other things, like counters, etc., which are safe.
+
+    For example, could attach predicates (just any expression returning a boolean, variables in scope are the fields available in every state and the fields available in the current state) to states, see below.
+    Not sure if it should be "when" or "only when":
+        - "when" means in this state whenever the condition is true (so you could automatically switch into the state
+        - "only when" means in this state iff you were in the state before AND the condition holds
+            - Probably easier to implement/deal with
+            - TODO: But what state are you in if you run the check and it doesn't hold?
+            - TODO: But what if you access fields?
+                - If it's a time-based thing, you'd need to check every single time you do something based on the current state, including writing fields.
+                - Not sure that that is going to work out...
+
+    Example, if we have:
+
+    state Live {
+        List[Bet@Owned] bets;
+    }
+
+    state Live only when auctionRunning() otherwise nextState();
+
+    transaction auctionRunning(Auction@Unowned this, Block@Unowned currentBlock) returns bool {
+        return now >= startTime && now <= endTime;
+        // Or for a more secure, non-timestamp based approach.
+        return currentBlock.getBlockNumber() >= startBlock && currentBlock.getBlockNumber() <= endBlock;
+    }
+
+    transaction nextState(Auction@Live >> Finished this) {
+        ->Finished();
+        // Other stuff
+    }
+
+    then if we have some transaction like:
+
+    transaction placeBet(Auction@Live this, Money@Owned >> Unowned amount) {
+        // stuff
+    }
+
+    it really becomes:
+
+    transaction placeBet(Auction@Live >> (Live | Finished) this, Money@Owned >> Unowned amount) {
+        if (auctionRunning()) {
+            // stuff
+        } else {
+            nextState();
+        }
+    }
+
+- Composing states doesn't work very well in Obsidian. A decent number of contracts have things like Pausable AND states, so to do this in Obsidian we'd need something like:
+    - Example: 0xb8f96a202fd238734dab3afc1b5517eb9969df06
+        - States needed for FinalizableCrowdsale are:
+            - FinalizedSaleNotStarted, FinalizedSaleRunning, FinalizedSaleEnded, NotFinalizedSaleNotStarted, NotFinalizedSaleRunning, NotFinalizedSaleEnded
+        - Not all of these states are valid; e.g., the real states are probably:
+            - SaleNotStarted, SaleRunning, SaleEnded, Finalized
+            - That is, Finalized is just one additional state
+        - Regardless, not sure if Obsidian has a good mechanism for this. I suppose you could inherit and then just add the states you need, but if you actually do need to modify old states, you're out of luck.
+
+- Most "ownership" isn't really like Obsidian's ownership, it's an address that owns the contracts.
+    - Not sure if Obsidian could help with this, or if we want to add support for it?
+    - Could think of it as being something like an Address object that holds ownership of the contract reference
+        - Although this doesn't really play nice with the typical ownership that smart contracts tend to use, because typically users other than the owner can change the state of the contract.
 
 - Can we somehow track contracts handling of ether/tokens and make sure none is lost?
+
+- There's a decent number of contracts that manage other ERC-20 tokens. ERC-20 token contracts are assets in Obsidian terms, I would say.
+
+- Anecdotally, people really seem to like using inheritance a lot instead of libraries?
 
 20 randomly selected contracts from: https://github.com/smartbugs/smartbugs-wild (Empirical Review of Automated Analysis Tools on 47,587 Ethereum Smart Contracts)
 
@@ -276,9 +342,408 @@ For example:
 ~  94     //        <  u =="0.000000000000000001" : ] 000000000000000.000000000000000000 ; 000000016314620.208489600000000000 ] >
 ~  95     //        < 0x000000000000000000000000000000000000000000000000000000000018E4E6 >
 
-0x1b19c2de7e9f04be641942e8da83852c44c45c80.sol
-0xecff8fc2a19f83fc855618704f38725756dbcae3.sol
-0x07dfd774302842c337928956734353db7910af29.sol
-0x2873f3dfa8b9cdcda9b619b0c3a62c2cd9daf5c5.sol
-0x60908477e34ac000c2b6643e17d77c3c6e4acb30.sol
+-----------------------------------------------
+0xa21999df32637b91e944533b04ea9d8d9153bca4.sol
+-----------------------------------------------
+- Token, ERC-20
+- Use SafeMath
+- Handles short address attack
+- Ownership:
+    - Ownable pattern, single owner
+- No states
+
+-----------------------------------------------
+0x9219d4a32d713396cb2799e7aa0203da7b0ba51b.sol
+-----------------------------------------------
+- Token, ERC-20
+- Uses SafeMath
+- Has burn
+- Ownership:
+    - Ownable pattern, single owner, no contract/interface
+    - Ownership transfer also transfers tokens.
+- No states
+
+-----------------------------------------------
+INTERESTING
+0x38e07a01d1b9d02452845d8ab70ef75b0349fd21.sol
+-----------------------------------------------
+- Generic Crowdsale app, parameterized ERC-20 tokens
+- Uses SafeMath
+- Token parameter has to have a mint function (NOT PART of the ERC-20 standard)
+- Ownership:
+    - Ownable pattern, single owner
+    - Has a Shared/Owned (?) reference to a token contract, because it calls mint, which will change the internal state, so it must have write permission
+- States:
+    - SaleNotStarted, SaleRunning, SalePaused, SaleFinished
+
+-----------------------------------------------
+INTERESTING
+0xeaba6368d6fa9ed06e569ba5c57f584a329a5152.sol
+-----------------------------------------------
+- Token "manager", uses parameterized ERC-20 tokens.
+- Uses SafeMath
+- Can manage multiple kinds of tokens
+- Ownership:
+    - Ownable pattern, single owner
+    - Also has "claimable" which is basically ownable but requires the new owner to claim ownership
+- States:
+    - NoToken,HasToken
+
+- POTENTIAL ISSUE: it doesn't perform any check for having a valid token contract before letting you call it's various transfer methods
+
+-----------------------------------------------
+0x48c8efdbf925a8028abf1d4bacb7baa59ff2948b.sol
+-----------------------------------------------
+- Token, ERC-20
+- POTENTIAL ISSUE: Seems like it can just swallow your money...
+- Ownership is money/token
+- No states
+
+-----------------------------------------------
+INTERESTING
+0xffa5d49dc77dec17aeaaa3580c7c1060f4709f0c.sol
+-----------------------------------------------
+- "MultiToken"s management (?), based on ERC-20
+- Uses SafeMath
+- Allows buying lots of token stuff between various networks? Needs a lot more time to understand.
+- Ownership:
+    - Ownable pattern, single owner, can renounce
+    - CheckedERC20
+        - Many functions parameterized by an ERC-20 Token contract, must be Shared/Owned because it writes
+    - Also several "networks": IKyberNetworkProxy, IBancorNetwork, each must be Shared/Owned
+- No states
+
+-----------------------------------------------
+0x6fe173bc1a4c9045d065f4fb57e769eb5f5589a5.sol
+-----------------------------------------------
+- Token, ERC-20
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner
+- States:
+    - Paused, NotPaused
+
+-----------------------------------------------
+INTERESTING
+0x048fe49be32adfc9ed68c37d32b5ec9df17b3603.sol
+-----------------------------------------------
+- Token, ERC-20
+- Has increase/decrease allowance
+- Has mint
+- Has burn
+- Uses SafeMath
+- Ownership:
+    - Has a "Roles" library
+        - Could implement this in Obsidian using a Person contract with states for the various roles (e.g., @Pauser, @Minter). Then again, what if someone is both a Pauser and a Minter?
+    - Has a Role struct, which Owned by the various Role managing contracts
+- States:
+    - Paused, NotPaused
+
+-----------------------------------------------
+INTERESTING
+0xfc1ce518cab9fe8a49e34a3cd5f066f32e32678a.sol
+-----------------------------------------------
+- Crowdsale app
+- Parameterized tokens (ERC-20)
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner, no contract/interface
+- States:
+    - BeforeSale, InSale, Finished
+- Can only withdraw tokens when sale is finished.
+
+-----------------------------------------------
+0x8ae568d934092188c97e9ddfec82a9a3b3856bb9.sol
+-----------------------------------------------
+- Investment app
+- Ownership:
+    - Deposit struct, Owned asset by main contract
+- No states
+- Doesn't even seem to work, cycles to the next investor before the previous is fully paid...?
+
+-----------------------------------------------
+0x0a798d55d431ed3036865717b98b25891a04bb92.sol
+-----------------------------------------------
+- Token, ERC-20
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner
+- No states
+
+-----------------------------------------------
+INTERESTING
+0xea13bfa584e6d7e4c8409a1178805a367821e2f6.sol
+-----------------------------------------------
+- Very long program (>2000 lines)
+- Prediction Market? Based on Questions and bets. Needs a LOT more time to understand, but seems to be that?
+- Many different contracts and structs, definitely some have states.
+
+-----------------------------------------------
+0x0dc3f6c12741b61e5145c1d05340f8a0315fecc1.sol
+-----------------------------------------------
+- Token, ERC-20
+- Ownership is money/token
+- No states
+
+-----------------------------------------------
+INTERESTING
+0xf37aa5f945688488056f32112267570517bbc303.sol
+-----------------------------------------------
+- Lottery
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner
+    - Has Ticket, Round structs, bot Owned by Lottery
+    - Ticket, Round could be considered assets
+    - Also there's "golden keys", not sure exactly what those are, but are probably assets?
+- States:
+    - Round: Live,Locked,Drawed,Ended
+    - Lottery: Activated, Deactivated
+- State of the Lottery is kind of the state of the current round Id
+
+-----------------------------------------------
+0x048694443ce5587f76d7233d0e475b14000a3f5c.sol
+-----------------------------------------------
+- Allocator?
+- Transfers tokens from some rando contract to a bunch of predetermined addressess.
+- Ownership is money/token, also Owned/Shared reference to ERC contract
+- States: NotExpired, Expired
+
+-----------------------------------------------
+0x1a661224edc279a3844ecd8bd0cd715daafb9cf7.sol
+-----------------------------------------------
+- Uses SafeMath
+- Token manager, ERC-20 basic
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+- States:
+    - Locked,Released
+
+-----------------------------------------------
+0xfcd7d82ff08b8abe4b278450ed189cf731f9602a.sol
+-----------------------------------------------
+- Token, ERC-20
+- Has burn
+- Has mint
+- Ownership:
+    - Ownable pattern, single owner, no contract/interface
+- States:
+    - Locked,NotLocked
+
+-----------------------------------------------
+INTERESTING
+0x22a4d688748845e9d5d7394a0f05bc583adf4656.sol
+-----------------------------------------------
+- Identity Manager
+- Ownership:
+    - Ownable pattern, single owner
+    - Proxy, can "forward" calls, Owned
+        - The Identity Manager uses these Proxy's to forward calls, these are Unowned I guess, because their own function is to call stuff on some other contract, but they don't modify themselves, and the owner is the contract that owns the Proxy.
+- Can transfer ownership of proxies to other users, so Proxies are sort of assets, and maybe are owned by the Identity Manager.
+- Unclear what the structue should be
+- Possibly states: could have states of Proxies or Users, indicating whether the timer has passes, whether they are an Owner or OlderOwner, etc.
+
+-----------------------------------------------
+INTERESTING
+0x3845f2534e6db61d3c093a84fa6b3672c895c91b.sol
+-----------------------------------------------
+- Uses tokens, ERC-20
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner, sometimes uses contract/interface
+    - Claimable
+- Has a "ReentrancyGuard"
+- No states
+
+-----------------------------------------------
+0xc2f20d3c335ad6034ac18d11997292a3cfc33110.sol
+-----------------------------------------------
+- Token, ERC-20
+- Has increase/decrease allowance
+- Uses SafeMath
+- Ownership is money/token
+- No states
+
+-----------------------------------------------
+INTERESTING
+0x1f7725942d18118d34621c6eb106a3f418f66710.sol
+-----------------------------------------------
+- Lottery/Guessing game
+- Ownership:
+    - Money/token
+    - Game structs are Owned by CryptoRoulette
+- No states
+
+-----------------------------------------------
+0x5cb92b06ca0226e0a2c5fc8ee23e9cc66b1a4e11.sol
+-----------------------------------------------
+- Token/Crowdsale, ERC-20
+- Handles short address attack
+- Uses SafeMath
+- Has increase/decreaseAllowance
+- Has mint
+- Has burn
+- Has "hero", "minters", and "oracle"
+- Ownership:
+    - Ownable pattern, single owner, no transfer allowed
+    - AcceptsTokens contract has an Unowned reference to the ETToken contract.
+    - Money/token
+- States
+    - Presale: Enabled,Disabled
+
+-----------------------------------------------
+0xeb5ecc826c83b417597f51bfda31175e1e651f5e.sol
+-----------------------------------------------
+- Token, ERC-20
+- Uses SafeMath
+- Splits initial tokens among three predetermined addresses
+    - This process seems to lose some tokens?
+- Ownership:
+    - Ownable pattern included, but not used; single owner
+    - Money/token
+- No states
+
+-----------------------------------------------
+0x82c5e2dd3d4652701c1da91d364a383edbaa0686.sol
+-----------------------------------------------
+- Token, ERC-20
+- Has burn
+- Has mint (called distr())
+- Uses SafeMath
+- Handles short address attack.
+- Ownership
+    - Ownable pattern, single owner (no contract/interface)
+    - Money/token
+- States:
+    - Distributing,DistributionFinished
+
+-----------------------------------------------
+0xfe8a1f99bb63a2a2d504be851b12eb932f112a2a.sol
+-----------------------------------------------
+- Document signing
+- Ownership
+    - Ownable pattern, single owner (no contract/interface)
+- States:
+    - Initial,Setup,Signed
+
+-----------------------------------------------
+INTERESTING
+0x69126f7fa0f53ef95c241b48cf3ac0dc88461bb8.sol
+-----------------------------------------------
+- Task Register
+    - Bitcoin related?
+    - Seems to be from: https://github.com/1Address/1Address/tree/master (but also duplicated)
+    - "Smart contract for automated BTC address generation pool"
+- Uses ERC-20 tokens for rewards (it seems)
+- Very long (~900 lines), so would take more time to understand fully
+- Uses SafeMath
+- Has a fairly complicated math library which appears to be used for elliptic curves? Crytography related, has functions for public key stuff.
+- Ownership:
+    - Ownable pattern, single owner
+    - Tasks are owned by the TaskRegister.
+- States:
+    - Upgradable
+        - States: Initialialized, Upgrading, Upgraded
+    - TaskRegister is Upgradable, so has the same states.
+    - Task
+        - Created,Solved,Payed
+
+-----------------------------------------------
+0xecb8f588eaf5a8ce9d964b0acece5d954e130e2f.sol
+-----------------------------------------------
+- Token, ERC-20
+- Has increase/decrease allowance
+- Has mint
+- Has burn
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner, can renounce ownership
+- No states
+
+-----------------------------------------------
+0xbeb4e73fadb43810670d698a79dd492a109f59a6.sol
+-----------------------------------------------
+- Token, ERC-20
+- Ownership is money/token
+- No states
+
+-----------------------------------------------
+0xab51a20d744574f33e7f28a7b66b748dd5f7ce04.sol
+-----------------------------------------------
+- "Contest"
+- Ownership is money/token
+- States: CanWithdraw,CannotWithdraw
+
+-----------------------------------------------
+INTERESTING
+0xb8f96a202fd238734dab3afc1b5517eb9969df06.sol
+-----------------------------------------------
+- Has Crowdsale
+- Uses SafeMath
+- Tokens are ERC-20 + minting + burning
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+- States:
+    - Crowdsale: SaleNotStarted, SaleRunning, SaleEnded
+    - MintableToken: CanMint, MintingFinished
+    - FinalizableCrowdsale: Finalized,NotFinalized+Crowdsale states
+    - RefundVault: Active,Refunding,Closed
+        - Uses StateMachine pattern
+    - Pausable pattern (Paused, NotPaused)
+        - POTENTIAL ISSUE: Mint and Burn are not protected by whenNotPaused
+
+-----------------------------------------------
+0xd499c86eb054639f555f6c712b081c3692fb13f1.sol
+-----------------------------------------------
+- Token, ERC-20
+- Ownership is money/token
+- No states
+
+-----------------------------------------------
+0x7f4404db6a3f4d3cfb41d5920d81d44d64759235.sol
+-----------------------------------------------
+- Token, ERC-20
+- Has mint
+- Has burn
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+- States:
+    - Accounts: Frozen, NotFrozen
+    - Yumerium: HasSaleAddress,NoSaleAddress
+
+-----------------------------------------------
+0xdd7efdbe9e150f6dcc4e67e66a8c2ce3433529dc.sol
+-----------------------------------------------
+- Token, ERC-20
+- Uses SafeMath
+- Has mint
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+- States:
+    - TheLiquidToken, ExtremeCoin: CanMint, MintingFinished
+
+-----------------------------------------------
+0x45d0bdfdfbfd62e14b64b0ea67dc6eac75f95d4d.sol
+-----------------------------------------------
+- Token: ERC-20, ERC-223
+- Uses SafeMath
+- Has a tokenFallback, but it doesn't seem to actually do anything?
+- Ownership:
+    - Ownable pattern, single owner, cannot transfer
+    - Money/token
+- States:
+    - ERC20Token: GlobalVaultOpen, GlobalVaultClosed
+    - Accounts also have a time vault: VaultOpen, VaultClosed
+
+-----------------------------------------------
+0x5fb7340da1ff2760bcc78c59b4f3691d5d67dde1.sol
+-----------------------------------------------
+- Token, ERC-20
+- Has burn
+- Ownership is money/token
+- No states
 
