@@ -1,6 +1,13 @@
 import sys
 from slither.slither import Slither
 
+def looks_like_state_check(contract, node):
+    for v in contract.variables:
+        if v in node.variables_read:
+            return True
+
+    return False
+
 def main(args):
     if len(args) < 2:
         print("Usage: python get-conditions.py FILENAME")
@@ -20,7 +27,7 @@ def main(args):
                 #     print(node)
 
                 if node.contains_if() or node.contains_require_or_assert():
-                    print(node)
+                    print(looks_like_state_check(contract, node), node)
 
 if __name__ == '__main__':
     main(sys.argv)
