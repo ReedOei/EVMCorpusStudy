@@ -22,8 +22,20 @@ fi
 
 for i in $(seq 1 10); do
     fname="$data_dir/data-$i.json"
-    if [[ "$override" == "--override" ]] || [[ ! -e "$fname" ]]; then
-        curl -H "Authorization: token $github_token" "https://api.github.com/search/code?q=hyperledger+extension:yaml" > "$fname"
-    fi
+    while true; do
+        if [[ "$override" == "--override" ]] || [[ ! -e "$fname" ]]; then
+            curl -D "headers" -H "Authorization: token $github_token" "https://api.github.com/search/code?q=hyperledger+language:YAML+NOT+marbles&per_page=100&page=$i" > "$fname"
+            retry_after="$(grep -E "Retry-After: " "headers" | sed -E "s/.*Retry-After: ([0-9]+).*/\1/g")"
+            if [[ -n "$retry_after" ]]; then
+                echo "[INFO] Got Retry-After: $retry_after. Sleeping for $retry_after seconds."
+                sleep "$retry_after"
+                continue
+            else
+                break
+            fi
+        else
+            break
+        fi
+    done
 done
 
