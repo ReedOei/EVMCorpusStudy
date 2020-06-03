@@ -825,7 +825,7 @@ https://github.com/aragon/aragon-id
     - Money/token
 - States:
     - IDeed: Open, Auction, Owned, Forbidden, Reveal, NotYetAvailable
-        - Not easily detectible.
+        - Not easily detectable.
 
 -----------------------------------------------
 https://github.com/gnosis/dx-uniswap-arbitrage
@@ -853,4 +853,209 @@ https://github.com/dlx-lisbon/smart-contracts
 - States:
     - Challenges: Added, Completed, Removed
         - Not easily detectable because state is of child objects in parallel maps/arrays
+
+-----------------------------------------------
+INTERESTING
+https://github.com/Lasse97/Blockchain-PoC-with-Ethereum
+-----------------------------------------------
+- Resource management
+- Uses tokens, ERC-721
+- ContainerExport (in ContainerExport.sol)
+    - Company struct: Owned by ContainerExport
+        - States: Valid, Invalid
+            - Not easily detectable
+    - Container: Owned by ContainerExport
+        - States: Valid, Invalid
+            - Not easily detectable
+    - "Owners": in misc. mappings
+- ContainerExport (in Owner.sol)
+    - "Owner" (via a mapping)
+        - States: NoCompany, HasCompany
+            - Not easily detecible
+    - Company struct: Owned by ContainerExport
+        - No states
+- StatusInformation struct (inside StatusRequest, but seems unused)
+- Could be an asset bug: Containers can be overwritten. Making them assets in Obsidian would prevent this. (although it seems like they just commented out the validation code for this...for some reason?)
+
+-----------------------------------------------
+INTERESTING: More complicated ownership structure thawn usual
+https://github.com/bitfalls/storydao
+-----------------------------------------------
+- Uses tokens, ERC-827, ERC-20
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner
+    - Submission struct: Owned by StoryDao
+    - Proposal struct: Owned by StoryDao
+    - Vote struct: Owned by Proposal
+- States:
+    - StoryDao: Inactive, Active, CanSubmitImage, StoryFinished
+        - Easily detectable
+    - Addresses: None,Blacklist,Whitelist
+        - Not easily detectable, stored in separate maps
+    - Submission: DoesNotExist, Exists, HasImage
+        - Not easily detectable, child struct
+    - Proposal: ToDelete, PastDeadline, Executed
+        - NOTE: Story as a uint8, so it's not even clear what all the possible typeFlags are
+        - Not easily detectable, child struct
+    - Vote: InSupport, NotInSupport
+        - Not easily detectable, child struct
+    - User: NotTokenHolder, TokenHolder
+        - Held implicitly in the number of tokens that the user holds.
+            - Would actually be a good candidate for the state invariant thing I thought of above
+        - Not easily detectable
+    - Voter: HasVoted, NotVoted
+        - Held in a mapping inside of Proposal
+        - Not easily detectable
+- Potential bug: Changing the durationDays doesn't change the deadline. I don't think Obsidian could detect this.
+
+-----------------------------------------------
+INTERESTING
+https://github.com/nionis/eternal-storage
+-----------------------------------------------
+- Storage manager
+- NOTE: code duplication could be greatly reduced by Obsidian's generics.
+- NOTE: This sort of thing is only necessary because the nature of Solidity's mappings doesn't let you know if there is actually a value in the mapping.
+- Ownership:
+    - Entries are owned by Stores
+- States:
+    - Entry: NotExists, Exists
+        - Stores implicit in mapping in a weird way, as noted below
+        - Not easily detectable
+
+- Potential issues: Uses `> 0` to check if an entry exists or not. But of course 0 is a valid value for some cases, and especially for integers this will exclude MANY valid values (i.e., all negative values...they've essentially transformed integers into unsigned integers)
+    - This is kind of a state bug too...
+
+-----------------------------------------------
+https://github.com/yudetamago/solidity-example
+-----------------------------------------------
+- Learning
+- Ownership:
+    - Ownable pattern, single owner
+    - Object: Owned by OneObjectContract
+- No states
+
+-----------------------------------------------
+https://github.com/blockwrkinc/BlockWRKToken
+-----------------------------------------------
+- Crowdsale/Token
+- Uses ERC-20/ERC-865 tokens
+- Tokens are "taxed", costing some fee for every transfer
+- Uses SafeMath
+- Ownership:
+    - Ownable pattern, single owner
+    - Money/token
+- States:
+    - BlockWRKICO: SaleNotStarted, SaleRunning, SaleCompleted
+        - Easily detectable
+
+-----------------------------------------------
+https://github.com/blockrockettech/TimeLockTokenEscrow
+-----------------------------------------------
+- Token Escrow
+- Uses Tokens, ERC-20
+- Has mint
+- Has burn
+- Has ReentrancyGuard
+- Ownership:
+    - Money/token
+    - TimeLock struct: Owned by TimeLockTokenEscrow
+- States:
+    - TimeLock: Locked, Unlocked
+        - Not easily detectable
+
+-----------------------------------------------
+https://github.com/wkd3475/solidity_learning
+-----------------------------------------------
+- Learning
+- No ownership
+- No states
+
+-----------------------------------------------
+https://github.com/EthereumDeveloperAlliance/token-atm
+-----------------------------------------------
+- Uses SafeMath
+- Uses Tokens, ERC-20
+- Ownership:
+    - Money/token
+    - Ownable pattern, single owner
+- States:
+    - Certificate: NotClaimed, Claimed
+        - Not easily detectable
+        - Not improved detectable
+        - Improved mapping detectable
+
+-----------------------------------------------
+https://github.com/Vishesh-Gupta/cryptoZombies
+-----------------------------------------------
+- Uses Tokens, ERC-721
+- Has mint
+- Uses SafeMath
+- Tokens:
+    - States: Fungible, NonFungible
+        - Not easily detectable
+        - Improved detectable
+- Ownership:
+    - Ownable pattern, single owner, can renounce ownership
+- GameState:
+    - Owns PlayerStates
+    - States: Uninitialized,Initialialized
+        - Not easily detectable
+        - Not improved detectable
+- Zombie:
+    - No ownership
+    - States: NotReady, Ready
+        - Not easily detectable
+        - Not improved detectable, because it's checked on a parameter. Maybe with some dataflow analysis we could do this.
+- Address:
+    - No ownership
+    - States: NoZombie, HasZombie
+        - Not easily detectable
+        - Improved detectable
+- PlayerState:
+    - Owns CardInstances
+    - Owns Decks
+    - No states
+- CardInstance:
+    - No ownership
+    - No states
+- Deck:
+    - No ownership
+    - No states
+- Vector2Int:
+    - No ownership
+    - No states
+- Rect:
+    - Owns Vector2Int structs
+    - No states
+- CustomUiLabel:
+    - Owns Rect struct
+    - No states
+- CustomUiButton:
+    - Owns Rect struct
+    - No states
+- SerializedGameStateChanges:
+    - Owns BinaryStream
+    - States: Uninitialized,Initialialized
+        - Not easily detectable
+        - Not improved detectable
+- SerializedCustomUi:
+    - Owns BinaryStream
+    - States: Uninitialized,Initialialized
+        - Not easily detectable
+        - Not improved detectable
+- ZBGameMode:
+    - States: BeforeMatchStart, AfterInitialDraw
+        - Not easily detectable
+        - Not improved detectable
+
+-----------------------------------------------
+https://github.com/mtmulch/Ethernaut-Solutions
+-----------------------------------------------
+- Learning
+- Uses Tokens, no standard
+- Ownership:
+    - Ownable pattern, single owner (no contract/interface)
+    - Money/token
+- No states
 

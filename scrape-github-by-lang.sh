@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# NOTE: Will only get the first 1000 results, because that's what GitHub let's us access
+# NOTE: Will only get the first 1000 results, because that's what GitHub lets us access
 
 set -ex
 
@@ -10,6 +10,8 @@ data_dir="$2"
 if [[ -z "$data_dir" ]]; then
     data_dir="data"
 fi
+
+mkdir -p "$data_dir"
 
 for i in $(seq 1 10); do
     fname="$data_dir/data-$i.json"
