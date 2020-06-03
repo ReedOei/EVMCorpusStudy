@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -e
+date
+git rev-parse HEAD
+
+cat initial-contract-list | while read -r contract; do
+    loc="$(cloc --hide-rate --quiet --include-lang=Solidity --csv "smartbugs-wild/contracts/$contract" | grep "Solidity" | csvtool col 5 -)"
+    echo "$loc"
+done
+
