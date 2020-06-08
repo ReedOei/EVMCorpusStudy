@@ -1,0 +1,30 @@
+asset contract Ether {
+    int amount;
+}
+
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Address@Unowned owner;
+    int lastActiveTransaction;
+
+    // These states are improved detectable, but not easily detectable
+    state Inactive;
+    state Active;
+}
+
+asset contract Order {
+    Token@Owned filledAmount;
+
+    // These states are improved detectable, but not easily detectable
+    state Traded;
+    state Withdrawn;
+}
+
+main asset contract Exchange {
+    Dict[Address@Unowned, Dict[Address@Unowned, Token@Owned]]@Owned tokens;
+    Dict[Address@Unowned, Integer]@Owned invalidOrder;
+}
+

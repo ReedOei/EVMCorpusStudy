@@ -1,0 +1,27 @@
+
+asset contract Token {
+    int amount;
+}
+
+asset contract Ether {
+    int amount;
+}
+
+asset contract DefaultSweeper {
+    Ether@Owned balance;
+}
+
+asset contract UserWallet {
+    Ether@Owned balance;
+}
+
+main asset contract Controller {
+    // States are easily detectable
+    state Halted;
+    state Running;
+
+    Sweeper@Owned defaultSweeper;
+    Dict[Address@Unowned, Sweeper@Owned]@Owned sweepers;
+}
+
+

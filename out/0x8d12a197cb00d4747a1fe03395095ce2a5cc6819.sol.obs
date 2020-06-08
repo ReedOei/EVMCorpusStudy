@@ -1,0 +1,24 @@
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Address@Unowned owner;
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+
+    // These states are improved detectable, but not easily detectable
+    state Regular;
+    state Silver;
+    state Gold;
+}
+
+asset contract Order {
+    Token@Owned filledAmount;
+}
+
+main asset contract EtherDelta {
+    Dict[Address@Unowned, Dict[Address@Unowned, Token@Owned]]@Owned tokens;
+    Dict[Address@Unowned, Dict[Bytes@Owned, Order@Owned]@Owned orders;
+}
+

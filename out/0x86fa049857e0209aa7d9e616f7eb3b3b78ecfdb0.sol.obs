@@ -1,0 +1,20 @@
+contract DSStop {
+    // States are easily detectable
+    state Stopped;
+    state NotStopped;
+}
+
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Address@Unowned owner;
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+}
+
+main asset contract DSToken {
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+}
+

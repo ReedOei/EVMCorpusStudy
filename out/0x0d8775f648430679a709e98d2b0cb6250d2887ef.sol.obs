@@ -1,0 +1,22 @@
+asset contract Token {
+    int amount;
+}
+
+asset contract Ether {
+    int amount;
+}
+
+asset contract Account {
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+}
+
+main asset contract BAToken {
+    Ether@Owned balance;
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+
+    // States are easy to detect
+    state CrowdsaleRunning;
+    state CrowdsaleFinalized;
+}
+

@@ -1,0 +1,52 @@
+asset contract Ether {
+    int amount;
+}
+
+asset contract MintableToken {
+    // States are easily detectable
+    state Minting;
+    state MintingFinished;
+}
+
+asset contract Crowdsale {
+    // States are easily detectable
+    state Running;
+    state Ended;
+}
+
+asset contract FinalizedCrowdsale extends Crowdsale {
+    state Finalized;
+}
+
+asset contract RefundVault {
+    Dict[Address@Unowned, Ether@Owned]@Owned deposited available in Active, Refunding;
+
+    // States are easily detectable
+    state Active;
+    state Refunding;
+    state Closed;
+}
+
+contract Pausable {
+    // States are easily detectable
+    state Paused;
+    state NotPaused;
+}
+
+asset contract WithdrawVault {
+    Dict[Address@Unowned, Ether@Owned]@Owned deposited;
+}
+
+asset contract Account {
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+
+    // States are improved detectable, but not easily detectable
+    state CanReceive;
+    state StopReceive;
+}
+
+main asset contract NPXSToken extends MintableToken, PausableToken {
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+}
+

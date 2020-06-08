@@ -1,0 +1,52 @@
+States:
+- About 47% of the contracts I looked at had some state
+    - About 80% of those would probably be caught be the analysis done in the corpus study about object protocols.
+    - I also found a few contracts that I think have state-related bugs.
+    - However, I have no idea how we would automatically detect such bugs?
+        - For example, in 0x6b92d76c9d0d40e53019ffa51b6f0c9b6bc657c9 (https://github.com/smartbugs/smartbugs-wild/blob/master/contracts/0x6b92d76c9d0d40e53019ffa51b6f0c9b6bc657c9.sol)
+            - All transfers can be paused.
+            - However, the function "multiTransfer" can be called even when the contract is Paused.
+            - This lets you transfer regardless of whether the contract is paused or not by just passing an array of length 1.
+            - But this sort of bug is a semantic thing that I can detect because I read the words and know what "paused" means.
+- Notably, we can be sure that there are more contracts with state
+- A few of the contracts have potential state bugs.
+- Another thing we might want to try is looking at the analysis tools, they do things like look for transaction order dependence or timestamp dependence, which might also indicate state usage.
+
+Ownership:
+- The most common kind of ownership isn't really "ownership", but is which address owns a contract.
+    - Maybe this shouldn't be counted, but it's a very common thing, so maybe we should support it.
+- Only about 20% of contracts use structs, but lots use mappings and we could consider basically all of these as having some kind of ownership/asset usage in terms of balances of tokens or ether, etc.
+    - In particular, almost 90% of the contracts I looked at either are a token or use tokens.
+    - "Parallel" maps are pretty common: e.g., a mapping for addresses to a balance, a mapping for addresses to an allowance, etc. So in Solidity you might do:
+
+    contract C {
+        mapping (address => uint256) public balances;
+        mapping (address => uint256) public allowance;
+    }
+
+    but in Obsidian we would combine these into a single object like Account below:
+
+    asset contract Token {
+        Integer@Owned quantity;
+
+        // Methods for transferring, merging, etc.
+    }
+
+    asset contract Account {
+        Token@Owned balance;
+        Dict[Address@Owned, Token@Owned] allowances;
+    }
+
+    contract C {
+        Dict[Address@Owned, Account@Owned] accounts;
+    }
+
+    In this case it's somewhat harder to talk about ownership or infer ownership.
+
+- We could try to infer ownership here? Not sure how easy or practical this would be, or maybe we'd just get like Shared references to everything.
+    - We could treat when we can infer Owned/Unowned as a "success", when we have to use "Shared", then it's a "failure" (not that it's really a failure, but...)
+
+Questions about transactions with exceptions:
+- Could help us identify the usefulness of states, because failed transactions may reveal a mismatch of expectations between the caller and the smart contract.
+    - Also, we know from that one Plaid study that having a language with states gives better documentation for when you're looking at state stuff, so this could help developers because they'll be working with state stuff.
+

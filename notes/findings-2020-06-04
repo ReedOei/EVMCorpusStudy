@@ -1,0 +1,68 @@
+- Had a hard time finding other corpuses of smart contracts to read
+    - I ended up just reading more Solidity contracts, just from GitHub instead
+    - I do have some ideas for how to get Hyperledger contracts or EOS contract from GitHub, but I had a little bit of trouble with getting the GitHub API to work so I can get a big list.
+        - I suppose I could just try like the top results, but not sure if that's the best way to do it.
+    - The distribution of project types in the GitHub solidity projects did change:
+        - Only 2 (10%) were tokens, compared with 35 (64%) from the previous group (57% used tokens vs. 87% used tokens)
+        - In general much more variation in projects
+    - Number using states went slightly up, I think this is probably expected because the contracts were longer
+    - Much harder to detect states, and not many uses of the Pausable pattern
+        - However, I think that we should still be able to detect state checks, if we modify my previous proposal to only look directly at checks performed on fields of the parent contract to looking at any checks that aren't comparing against parameters of the function (see RQ doc for ex.)
+- Wrote some stuff down on RQ doc
+    States:
+    - Another thing we might want to try is looking at the analysis tools, they do things like look for transaction order dependence or timestamp dependence, which might also indicate state usage.
+
+    Ownership:
+    - We could try to infer ownership here? Not sure how easy or practical this would be, or maybe we'd just get like Shared references to everything.
+        - We could treat when we can infer Owned/Unowned as a "success", when we have to use "Shared", then it's a "failure" (not that it's really a failure, but...)
+
+    Questions about transactions with exceptions:
+    - Could help us identify the usefulness of states, because failed transactions may reveal a mismatch of expectations between the caller and the smart contract.
+        - Also, we know from that one Plaid study that having a language with states can give better documentation for when you're looking at state stuff, so this could help developers because they'll be working with state stuff.
+
+- Also wrote a basic version of a tool to go through and look at the various conditions/look for state checks using Slither
+    - Seems like Slither will be easy to use, but we'd only be able to look at contracts that have Solidity code available on Etherscan.
+    - We can rescan using those people's tools (the smartbugs ones) but it's still not going to be THAT many contracts.
+
+TODO:
+- Bugs that we wouldn't detect but would be good to detect.
+    - Such as not losing references, but losing ability to work with the references.
+        - Didn't see any of this.
+
+- Maybe look for early returns?
+    - Change some state but not all states that the function should change.
+    - DID NOT DO
+
+- Or fallback functions/payable functions that accept ether and don't do anything with the state.
+    - DID NOT DO
+
+- How many times has each contract been invoked?
+    - Could weight results by these numbers, giving a more accurate picture of the attributes of widely used contracts
+    - DID NOT DO
+
+- How similar are the various token contracts?
+    - Maybe how many parameters would a token contract generator need to generate the full range?
+    - Need a mint, burn, increase/decrease allowance, Ownable, Pausable
+
+- Conditions under which functions abort or return early:
+    - How many are just checking an enum and how many are checking complicated conditions?
+    - Not sure exactly how to answer this question, but I did write a Slither program that extracts all of the conditions from
+    - Try running Slither to do this
+    - SORT OF DID
+
+TODO NEW:
+- Maybe look at the original contracts, but weight them by the number of transactions or ether or total ether flowed through as a "popularity" weight.
+    - Or maybe say "interesting" if lots of money OR lots of transactions
+- Look at all the 50 most starred repositories on GitHub
+- How to look at ownership:
+    - Is this something that shouldn't be duplicated or lost?
+    - Could this be checked using an object htat represents an asset
+    - Could add money and tokens to this
+    - Add another column for this
+    - Information is supposed to be private but you let someone access it.
+    - How to determine which structs really are assets and which are not?
+- Should mark questions that look hard vs. easy to answer on RQ doc
+- Could study how modifiers are used in Solidity
+    - "good" vs. "bad" design
+    - how often does modifier order matter?
+

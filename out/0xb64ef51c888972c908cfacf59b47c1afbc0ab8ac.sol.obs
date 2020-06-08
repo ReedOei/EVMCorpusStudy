@@ -1,0 +1,22 @@
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+}
+
+asset contract UpgradeableToken {
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+
+    // States are NOT improved detectable (without a more complicated value flow analysis)
+    state Unknown;
+    state UpgradeNotAllowed;
+    state WaitingForAgent;
+    state ReadyToUpgrade;
+    state Upgrading;
+}
+
+main asset contract CentrallyIssuedToken extends UpgradeableToken {
+}

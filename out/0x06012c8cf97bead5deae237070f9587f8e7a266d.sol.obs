@@ -1,0 +1,74 @@
+contract KittyAccessControl {
+    // States are easily detectable
+    state Paused;
+    state Unpaused;
+}
+
+asset contract Kitty {
+    // States are improved detectable, but not easily detectable
+    state ReadyToBreed;
+    state IsPregnant;
+    state ReadyToGiveBirth;
+}
+
+asset contract KittyBase extends KittyAccessControl {
+    List[Kitty@Owned]@Owned kitties;
+}
+
+asset contract KittyOwnership extends KittyBase {
+
+}
+
+asset contract KittyBreeding extends KittyOwnership {
+
+}
+
+asset contract Token {
+    int id;
+}
+
+asset contract Ether {
+    int amount;
+}
+
+asset contract Auction {
+    Token@Owned token;
+
+    // States are improved detectable, but not easily detectable
+    state NotRunning;
+    state Running;
+    state Finished;
+    state Cancelled;
+}
+
+asset contract ClockAuction {
+    Ether@Owned balance;
+    Dict[Integer@Unowned, Auction@Owned]@Owned auctions;
+
+    // States are easily detectable
+    state Paused;
+    state Unpaused;
+}
+
+asset contract SiringClockAuction extends ClockAuction {
+
+}
+
+asset contract SaleClockAuction extends ClockAuction {
+
+}
+
+asset contract KittyAuction is KittyBreeding {
+    SiringClockAuction@Owned siringAuction;
+    SaleClockAuction@Owned saleAuction;
+}
+
+asset contract KittyMinting extends KittyAuction {
+
+}
+
+main asset contract KittyCore extends KittyMinting {
+    Ether@Owned balance;
+}
+
+

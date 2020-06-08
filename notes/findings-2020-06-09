@@ -1,0 +1,55 @@
+States:
+- One thing to note is that, in Solidity, every key in a mapping exists, but is just mapped to a default value.
+  So, some things that look like state checks are checking if some is initialized or not.
+  On one hand, I feel that this IS a state check.
+  On the other hand, it's just an artifact of how Solidity works, and adds some noise/uncertainty. For example, does EVERY entry in a mapping have a state, because it could be initialized or not initialized? Or does it depend on the semantic value of the entry: for example, balances are NOT states, becaues they don't behave like states. The default value is meaningful for them. But for other things, like some structs, the default value just means that it's not initialized?
+  I used the latter approach, so only some mappings "really" encode states.
+
+DEALING WITH DUPLICATES:
+- Write this out, but basically, combine all dup. contracts into a single one, look at each grouping; can also see freq. and sch
+- There are some tools for code similarity detection:
+    - https://arxiv.org/abs/1908.08615
+    - https://ieeexplore.ieee.org/abstract/document/8979435?casa_token=_4hyv8TinC4AAAAA:lhK4SplxtciE-LcEK7DQBZ81c0C3NUCcwt9Y0Aq0a8bCbl23PY3BxkrSGGo9N3PGZ4yE_Lc1Gg4 (same authors as  above, newer version?)
+
+- UPLOAD CLEANED VERSION OF MORE IN-DEPTH NOTES ABOUT THE OWNERSHIP STRUCTURE OF THE CONTRACTS
+
+WHAT ABOUT THIS QUESTION?
+- How to determine which structs really are assets and which are not?
+    - Tokens and Ether are "automatically" assets
+    - But so are things like Bets, deals, or records of investment, I would say.
+    - What do these things have in common?
+    - How can we detect them?
+    - They often hold tokens---but not always.
+        - They may hold ownership via a cryptographic commitment of some kind.
+    - Also, kind of everything is sort of an asset...
+    - Also, are there non-financial assets?
+
+TODO:
+- How similar are the various token contracts?
+    - Maybe how many parameters would a token contract generator need to generate the full range?
+    - Need a mint, burn, increase/decrease allowance, Ownable, Pausable, transaction fees (or not)
+    - Need to be able to restrict burn to "blacklisted" accounts
+    - Need to able to mine tokens
+
+- Maybe look at the original contracts, but weight them by the number of transactions or ether or total ether flowed through as a "popularity" weight.
+    - Or maybe say "interesting" if lots of money OR lots of transactions
+- Look at all the 50 most starred repositories on GitHub
+- How to look at ownership:
+    - Is this something that shouldn't be duplicated or lost?
+    - Could this be checked using an object htat represents an asset
+    - Could add money and tokens to this
+    - Add another column for this
+    - Information is supposed to be private but you let someone access it.
+- Should mark questions that look hard vs. easy to answer on RQ doc
+- Could study how modifiers are used in Solidity
+    - "good" vs. "bad" design
+    - how often does modifier order matter?
+
+- If reentrancy is used, does it follow the convention?
+    - If they don't, can it be exploited?
+    - If they do, does it look like it was hard to do?
+
+My plan for the next few days is to take a look at some more contracts, focused on those that are more "important" (i.e., top projects on GitHub or those with lots of transactions or ether)
+    and while I do, look more in-depth at the ownership/asset usage in them.
+I can also spend a little more time looking for contracts on other platforms, and do some similar analysis there.
+

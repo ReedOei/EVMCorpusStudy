@@ -1,0 +1,7 @@
+asset contract Ether {
+    int amount;
+}
+
+main contract ReplaySafeSplit {
+}
+

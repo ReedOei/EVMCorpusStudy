@@ -4,8 +4,13 @@ set -e
 date
 git rev-parse HEAD
 
-cat initial-contract-list | while read -r contract; do
-    loc="$(cloc --hide-rate --quiet --include-lang=Solidity --csv "smartbugs-wild/contracts/$contract" | grep "Solidity" | csvtool col 5 -)"
-    echo "$loc"
+cat "$1" | while read -r contract; do
+    if [[ -f "smartbugs-wild/contracts/$contract" ]]; then
+        loc="$(cloc --hide-rate --quiet --include-lang=Solidity --csv "smartbugs-wild/contracts/$contract" | grep "Solidity" | csvtool col 5 -)"
+        echo "$loc"
+    else
+        # If it doesn't exist, 0 LOC to mark that there's no code
+        echo "0"
+    fi
 done
 

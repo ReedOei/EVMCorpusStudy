@@ -1,0 +1,28 @@
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+}
+
+asset contract TokenTimeLock {
+    Token@Owned amount available in Locked, Claimable;
+
+    // States easily detectable
+    state Locked;
+    state Claimable;
+    state Claimed;
+}
+
+main asset contract OMGToken {
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+
+    // States easily detectable
+    state CanMint;
+    state MintingFinished;
+    state Paused;
+    state Unpaused;
+}
+

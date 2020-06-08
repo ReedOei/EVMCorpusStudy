@@ -1,0 +1,13 @@
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+}
+
+main asset contract CpcToken {
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+}
+

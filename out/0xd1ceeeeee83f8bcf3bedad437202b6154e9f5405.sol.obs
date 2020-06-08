@@ -1,0 +1,17 @@
+asset contract Ether {
+    int amount;
+}
+
+asset contract Bet {
+    // States are improved detectable, but not easily detetable.
+    state Clean; // This state is sort of an artifact of how Solidity mappings work.
+    state Active {
+        Ether@Owned amount;
+    }
+    state Processed;
+}
+
+main asset contract Dice2Win {
+    Dict[Integer@Owned, Bet@Owned]@Owned bets;
+}
+

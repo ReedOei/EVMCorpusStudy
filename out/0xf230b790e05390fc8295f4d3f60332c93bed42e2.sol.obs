@@ -1,0 +1,17 @@
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+}
+
+main asset contract TronToken {
+    // States are easily detectable
+    state Stopped;
+    state Running;
+
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+}
+

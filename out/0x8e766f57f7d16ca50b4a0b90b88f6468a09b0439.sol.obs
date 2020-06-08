@@ -1,0 +1,49 @@
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+
+    // States are improved detectable, but not easily detectable
+    state Regular;
+    state Blacklisted;
+}
+
+main asset contract TokenERC20 {
+    Dict[Address@Unowned, Account@Owned]@Owned accounts;
+}
+
+
+-----------------------------------------------
+INTERESTING
+0x6090a6e47849629b7245dfa1ca21d94cd15878ef.sol
+-----------------------------------------------
+asset contract Deed {
+    Ether@Owned balance;
+
+    state Active
+    state Closed;
+}
+
+asset contract Entry {
+    // States are not improved detectable. We would need some more complicated value flow analysis to make this happen, because it calculates the states every time it needs to check it.
+    state Open;
+    state Auction;
+    state OwnedMode; // Called Owned in original, but that means something in Obsidian
+    state Forbidden;
+    state Reveal;
+    state NotYetAvailable;
+
+}
+
+main asset contract Registrar {
+    // States are easily detectable
+    state Open;
+    state Closed;
+
+    Dict[Address@Unowned, Dict[Bytes@Unowned, Deed@Owned]@Owned]@Owned sealedBids;
+    Dict[Bytes@Unowned, Entry@Owned]@Owned entries;
+}
+

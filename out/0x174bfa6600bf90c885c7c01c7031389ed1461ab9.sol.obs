@@ -1,0 +1,23 @@
+asset contract Ether {
+    int amount;
+}
+
+asset contract Token {
+    int amount;
+}
+
+asset contract Account {
+    Address@Unowned owner;
+    Token@Owned balance;
+    Dict[Address@Unowned, Integer]@Owned allowances;
+
+    // These states are improved detectable, but not easily detectable
+    state Frozen;
+    state Unfrozen;
+}
+
+main asset contract MyAdvancedToken {
+    Ether@Owned balance;
+    Dict[Address@Unowned, Account]@Owned accounts;
+}
+
